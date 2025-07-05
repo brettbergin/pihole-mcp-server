@@ -226,12 +226,26 @@ You can override this with the `--config-dir` option.
 
 ## Security
 
-### Credential Protection
+### Credential Protection Architecture
+
+The Pi-hole MCP server implements a robust multi-layered security architecture to protect your Pi-hole authentication credentials. The credential manager uses a **security-first approach** with automatic fallback mechanisms to ensure your sensitive information remains protected across all supported platforms.
+
+**Primary Security Layer**: The system first attempts to store credentials in your operating system's native keyring service, which provides hardware-backed encryption when available. On **Linux**, this integrates with GNOME Keyring, KDE Wallet, or Secret Service API. On **macOS**, credentials are stored in the secure Keychain. On **Windows**, the Windows Credential Manager is used. These system keyrings provide the highest level of security as they leverage your OS's built-in credential protection mechanisms.
+
+**Fallback Security Layer**: If the system keyring is unavailable or fails, the credential manager automatically falls back to AES-256 encrypted file storage. This uses PBKDF2 key derivation (100,000 iterations) with SHA-256 hashing and machine-specific salts derived from your system's unique identifiers (machine ID, hostname, and username). The encrypted credentials are stored in restrictive-permission files (600/700) in your user's local configuration directory.
+
+**Platform-Specific Secure Storage Locations**:
+- **Linux**: System keyring first, then `~/.local/share/pihole-mcp-server/credentials.json` (encrypted)
+- **macOS**: macOS Keychain first, then `~/.local/share/pihole-mcp-server/credentials.json` (encrypted)  
+- **Windows**: Windows Credential Manager first, then `%LOCALAPPDATA%\pihole-mcp-server\credentials.json` (encrypted)
+
+Users can verify their secure credential storage by checking their system's credential manager (Keychain Access on macOS, Credential Manager on Windows, or `secret-tool` on Linux) for entries under the service name "pihole-mcp-server", or by locating the encrypted backup file in their platform-specific configuration directory.
+
+### Additional Security Features
 - API keys and web passwords are never logged or displayed in plain text
-- Stored using system keyring when available
-- Fallback to AES-encrypted file storage
-- Machine-specific encryption keys
 - Automatic detection prevents credential type mismatches
+- Memory-safe credential handling with immediate cleanup
+- Machine-specific encryption keys prevent credential portability attacks
 
 ### SSL/TLS Support
 - Full HTTPS support with certificate verification
