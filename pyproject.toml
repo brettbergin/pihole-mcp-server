@@ -40,6 +40,10 @@ dev = [
     "isort>=5.0.0",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
+    "responses>=0.24.0",
+    "freezegun>=1.2.0",
     "ruff>=0.1.0",
 ]
 
@@ -126,4 +130,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=pihole_mcp_server --cov-report=term-missing --cov-report=html"
+addopts = "--cov=pihole_mcp_server --cov-report=term-missing --cov-report=html --cov-report=json --cov-report=xml --cov-fail-under=100 --strict-markers"
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
