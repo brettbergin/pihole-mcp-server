@@ -1,6 +1,7 @@
 """Pi-hole API client for interacting with Pi-hole server."""
 
 import json
+import logging
 import os
 import tempfile
 import time
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+import urllib3
 from pydantic import BaseModel, Field, validator
 
 
@@ -130,8 +132,6 @@ class PiHoleClient:
         if not config.verify_ssl:
             self.session.verify = False
             # Disable SSL warnings
-            import urllib3
-
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def _get_session_cache_file(self) -> Path:
@@ -284,8 +284,6 @@ class PiHoleClient:
             return self._session_valid
         except requests.exceptions.RequestException as e:
             # Log the actual error for debugging
-            import logging
-
             logging.error(f"Request exception in authentication: {e}")
             self._session_valid = False
             self._csrf_token = None
@@ -293,8 +291,6 @@ class PiHoleClient:
             return False
         except json.JSONDecodeError as e:
             # Log the actual error for debugging
-            import logging
-
             logging.error(f"JSON decode error in authentication: {e}")
             self._session_valid = False
             self._csrf_token = None
@@ -302,8 +298,6 @@ class PiHoleClient:
             return False
         except Exception as e:
             # Log the actual error for debugging
-            import logging
-
             logging.error(f"Unexpected error in authentication: {e}")
             self._session_valid = False
             self._csrf_token = None

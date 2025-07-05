@@ -7,7 +7,7 @@ from mcp import types
 
 from pihole_mcp_server.credential_manager import CredentialNotFoundError
 from pihole_mcp_server.pihole_client import PiHoleError
-from pihole_mcp_server.server import PiHoleMCPServer, PiHoleToolError
+from pihole_mcp_server.server import PiHoleMCPServer, PiHoleToolError, async_main, main
 
 
 class TestPiHoleMCPServer:
@@ -496,8 +496,6 @@ class MockAsyncIterator:
 @pytest.mark.asyncio
 async def test_async_main(mock_mcp_server, mock_stdio_server):
     """Test the async_main function."""
-    from pihole_mcp_server.server import async_main
-
     # Mock the stdio server context manager properly
     mock_context = Mock()
     mock_context.__aenter__ = Mock(return_value=("read_stream", "write_stream"))
@@ -514,8 +512,6 @@ async def test_async_main(mock_mcp_server, mock_stdio_server):
 
 def test_main_function():
     """Test the main function."""
-    from pihole_mcp_server.server import main
-
     with patch("asyncio.run") as mock_run:
         main()
 

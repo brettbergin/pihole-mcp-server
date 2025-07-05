@@ -1,7 +1,9 @@
 """Secure credential management for Pi-hole MCP server."""
 
+import getpass
 import json
 import os
+import socket
 import stat
 from base64 import b64decode, b64encode
 from dataclasses import asdict, dataclass
@@ -191,9 +193,6 @@ class CredentialManager:
 
         # Fallback to hostname + username
         if not machine_id:
-            import getpass
-            import socket
-
             machine_id = f"{socket.gethostname()}-{getpass.getuser()}"
 
         return machine_id
