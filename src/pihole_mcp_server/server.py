@@ -90,58 +90,6 @@ class PiHoleMCPServer:
                     },
                 ),
                 Tool(
-                    name="pihole_query_stats",
-                    description="Get detailed Pi-hole query statistics",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {},
-                        "required": [],
-                    },
-                ),
-                Tool(
-                    name="pihole_top_domains",
-                    description="Get top queried domains",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "count": {
-                                "type": "integer",
-                                "description": "Number of top domains to return (default: 10)",
-                                "minimum": 1,
-                                "maximum": 100,
-                                "default": 10,
-                            },
-                        },
-                        "required": [],
-                    },
-                ),
-                Tool(
-                    name="pihole_top_blocked",
-                    description="Get top blocked domains",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "count": {
-                                "type": "integer",
-                                "description": "Number of top blocked domains to return (default: 10)",
-                                "minimum": 1,
-                                "maximum": 100,
-                                "default": 10,
-                            },
-                        },
-                        "required": [],
-                    },
-                ),
-                Tool(
-                    name="pihole_query_types",
-                    description="Get query types breakdown",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {},
-                        "required": [],
-                    },
-                ),
-                Tool(
                     name="pihole_version",
                     description="Get Pi-hole version information",
                     inputSchema={
@@ -174,14 +122,6 @@ class PiHoleMCPServer:
                     return await self._handle_enable()
                 elif name == "pihole_disable":
                     return await self._handle_disable(arguments)
-                elif name == "pihole_query_stats":
-                    return await self._handle_query_stats()
-                elif name == "pihole_top_domains":
-                    return await self._handle_top_domains(arguments)
-                elif name == "pihole_top_blocked":
-                    return await self._handle_top_blocked(arguments)
-                elif name == "pihole_query_types":
-                    return await self._handle_query_types()
                 elif name == "pihole_version":
                     return await self._handle_version()
                 elif name == "pihole_test_connection":
@@ -287,133 +227,6 @@ class PiHoleMCPServer:
         
         except PiHoleError as e:
             raise PiHoleToolError(f"Failed to disable Pi-hole: {e}")
-    
-    async def _handle_query_stats(self) -> List[types.TextContent]:
-        """Handle query stats request."""
-        try:
-            # Get detailed statistics
-            await self._ensure_client_initialized()
-            assert self.client is not None
-            status = self.client.get_status()
-            
-            stats_text = "📊 **Pi-hole Query Statistics**\n\n"
-            
-            # Basic stats
-            if status.queries_today is not None:
-                stats_text += f"**Total Queries Today:** {status.queries_today:,}\n"
-            if status.ads_blocked_today is not None:
-                stats_text += f"**Ads Blocked Today:** {status.ads_blocked_today:,}\n"
-            if status.ads_percentage_today is not None:
-                stats_text += f"**Block Percentage:** {status.ads_percentage_today:.1f}%\n"
-            
-            stats_text += "\n**Query Distribution:**\n"
-            if status.queries_forwarded is not None:
-                stats_text += f"• Forwarded: {status.queries_forwarded:,}\n"
-            if status.queries_cached is not None:
-                stats_text += f"• Cached: {status.queries_cached:,}\n"
-            if status.reply_nodata is not None:
-                stats_text += f"• NODATA: {status.reply_nodata:,}\n"
-            if status.reply_nxdomain is not None:
-                stats_text += f"• NXDOMAIN: {status.reply_nxdomain:,}\n"
-            if status.reply_cname is not None:
-                stats_text += f"• CNAME: {status.reply_cname:,}\n"
-            if status.reply_ip is not None:
-                stats_text += f"• IP: {status.reply_ip:,}\n"
-            
-            stats_text += "\n**Network Stats:**\n"
-            if status.unique_domains is not None:
-                stats_text += f"• Unique Domains: {status.unique_domains:,}\n"
-            if status.unique_clients is not None:
-                stats_text += f"• Unique Clients: {status.unique_clients:,}\n"
-            if status.clients_ever_seen is not None:
-                stats_text += f"• Clients Ever Seen: {status.clients_ever_seen:,}\n"
-            
-            return [types.TextContent(type="text", text=stats_text)]
-        
-        except PiHoleError as e:
-            raise PiHoleToolError(f"Failed to get query statistics: {e}")
-    
-    async def _handle_top_domains(self, arguments: Dict[str, Any]) -> List[types.TextContent]:
-        """Handle top domains request."""
-        try:
-            await self._ensure_client_initialized()
-            assert self.client is not None
-            count = arguments.get("count", 10)
-            
-            # Try to get top domains (requires authentication)
-            data = self.client._make_request("topItems", params={"count": count}, require_auth=True)
-            
-            if "top_queries" in data:
-                top_domains = data["top_queries"]
-                
-                result_text = f"🌐 **Top {count} Queried Domains**\n\n"
-                
-                for domain, queries in top_domains.items():
-                    result_text += f"• **{domain}**: {queries:,} queries\n"
-                
-                return [types.TextContent(type="text", text=result_text)]
-            else:
-                return [types.TextContent(
-                    type="text",
-                    text="No top domains data available or insufficient permissions."
-                )]
-        
-        except PiHoleError as e:
-            raise PiHoleToolError(f"Failed to get top domains: {e}")
-    
-    async def _handle_top_blocked(self, arguments: Dict[str, Any]) -> List[types.TextContent]:
-        """Handle top blocked domains request."""
-        try:
-            await self._ensure_client_initialized()
-            assert self.client is not None
-            count = arguments.get("count", 10)
-            
-            # Try to get top blocked domains (requires authentication)
-            data = self.client._make_request("topItems", params={"count": count}, require_auth=True)
-            
-            if "top_ads" in data:
-                top_blocked = data["top_ads"]
-                
-                result_text = f"🚫 **Top {count} Blocked Domains**\n\n"
-                
-                for domain, blocks in top_blocked.items():
-                    result_text += f"• **{domain}**: {blocks:,} blocks\n"
-                
-                return [types.TextContent(type="text", text=result_text)]
-            else:
-                return [types.TextContent(
-                    type="text",
-                    text="No top blocked domains data available or insufficient permissions."
-                )]
-        
-        except PiHoleError as e:
-            raise PiHoleToolError(f"Failed to get top blocked domains: {e}")
-    
-    async def _handle_query_types(self) -> List[types.TextContent]:
-        """Handle query types request."""
-        try:
-            # Try to get query types (requires authentication)
-            await self._ensure_client_initialized()
-            assert self.client is not None
-            data = self.client._make_request("queryTypesOverTime", require_auth=True)
-            
-            if "querytypes" in data:
-                query_types = data["querytypes"]
-                
-                result_text = "📋 **Query Types Breakdown**\n\n"
-                
-                for qtype, percentage in query_types.items():
-                    result_text += f"• **{qtype}**: {percentage:.1f}%\n"
-                
-                return [types.TextContent(type="text", text=result_text)]
-            else:
-                return [types.TextContent(
-                    type="text",
-                    text="No query types data available or insufficient permissions."
-                )]
-        
-        except PiHoleError as e:
-            raise PiHoleToolError(f"Failed to get query types: {e}")
     
     async def _handle_version(self) -> List[types.TextContent]:
         """Handle version request."""
