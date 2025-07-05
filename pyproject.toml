@@ -1,6 +1,6 @@
 [project]
 name = "pihole-mcp-server"
-version = "0.1.0"
+version = "0.1.1"
 description = "MCP server for Pi-hole DNS server interactions"
 readme = "README.md"
 authors = [

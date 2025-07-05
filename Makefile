@@ -79,3 +79,7 @@ ci-lint: ## Run linting in CI environment
 	python -m mypy src/
 	python -m black --check src/ tests/
 	python -m isort --check-only src/ tests/ 
+
+upload: ## Upload package to PyPI
+	python -m build
+	twine upload dist/*	
