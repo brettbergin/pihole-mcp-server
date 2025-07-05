@@ -186,11 +186,6 @@ The MCP server provides the following tools for AI assistants:
 - `pihole_disable` - Disable Pi-hole DNS blocking (with optional duration)
 
 ### Statistics and Analytics
-- `pihole_query_stats` - Get detailed query statistics
-- `pihole_top_domains` - Get top queried domains
-- `pihole_top_blocked` - Get top blocked domains
-- `pihole_query_types` - Get query types breakdown
-
 ### System Information
 - `pihole_version` - Get Pi-hole version information
 - `pihole_test_connection` - Test connection and authentication

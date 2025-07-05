@@ -219,164 +219,6 @@ class TestPiHoleMCPServer:
         assert "Failed to disable Pi-hole" in str(excinfo.value)
     
     @pytest.mark.asyncio
-    async def test_handle_query_stats_success(self, mock_mcp_server, sample_pihole_status):
-        """Test handling query stats request successfully."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client.get_status.return_value = sample_pihole_status
-        server.client = mock_client
-        
-        result = await server._handle_query_stats()
-        
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], types.TextContent)
-        assert "Query Statistics" in result[0].text
-        assert "1,234" in result[0].text  # Total queries
-        assert "567" in result[0].text   # Ads blocked
-    
-    @pytest.mark.asyncio
-    async def test_handle_query_stats_pihole_error(self, mock_mcp_server):
-        """Test handling query stats request with Pi-hole error."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client.get_status.side_effect = PiHoleError("API error")
-        server.client = mock_client
-        
-        with pytest.raises(PiHoleToolError) as excinfo:
-            await server._handle_query_stats()
-        
-        assert "Failed to get query statistics" in str(excinfo.value)
-    
-    @pytest.mark.asyncio
-    async def test_handle_top_domains_success(self, mock_mcp_server):
-        """Test handling top domains request successfully."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client._make_request.return_value = {
-            "top_queries": {
-                "google.com": 1000,
-                "facebook.com": 500,
-                "youtube.com": 300
-            }
-        }
-        server.client = mock_client
-        
-        result = await server._handle_top_domains({"count": 10})
-        
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], types.TextContent)
-        assert "Top 10 Queried Domains" in result[0].text
-        assert "google.com" in result[0].text
-        assert "1,000" in result[0].text
-    
-    @pytest.mark.asyncio
-    async def test_handle_top_domains_no_data(self, mock_mcp_server):
-        """Test handling top domains request with no data."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client._make_request.return_value = {}
-        server.client = mock_client
-        
-        result = await server._handle_top_domains({"count": 10})
-        
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], types.TextContent)
-        assert "No top domains data available" in result[0].text
-    
-    @pytest.mark.asyncio
-    async def test_handle_top_domains_default_count(self, mock_mcp_server):
-        """Test handling top domains request with default count."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client._make_request.return_value = {"top_queries": {}}
-        server.client = mock_client
-        
-        await server._handle_top_domains({})
-        
-        # Should use default count of 10
-        mock_client._make_request.assert_called_once_with("topItems", params={"count": 10}, require_auth=True)
-    
-    @pytest.mark.asyncio
-    async def test_handle_top_blocked_success(self, mock_mcp_server):
-        """Test handling top blocked domains request successfully."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client._make_request.return_value = {
-            "top_ads": {
-                "ads.example.com": 500,
-                "tracker.example.com": 300,
-                "malware.example.com": 200
-            }
-        }
-        server.client = mock_client
-        
-        result = await server._handle_top_blocked({"count": 5})
-        
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], types.TextContent)
-        assert "Top 5 Blocked Domains" in result[0].text
-        assert "ads.example.com" in result[0].text
-        assert "500" in result[0].text
-    
-    @pytest.mark.asyncio
-    async def test_handle_top_blocked_no_data(self, mock_mcp_server):
-        """Test handling top blocked domains request with no data."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client._make_request.return_value = {}
-        server.client = mock_client
-        
-        result = await server._handle_top_blocked({"count": 5})
-        
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], types.TextContent)
-        assert "No top blocked domains data available" in result[0].text
-    
-    @pytest.mark.asyncio
-    async def test_handle_query_types_success(self, mock_mcp_server):
-        """Test handling query types request successfully."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client._make_request.return_value = {
-            "querytypes": {
-                "A": 65.5,
-                "AAAA": 25.3,
-                "CNAME": 8.2,
-                "PTR": 1.0
-            }
-        }
-        server.client = mock_client
-        
-        result = await server._handle_query_types()
-        
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], types.TextContent)
-        assert "Query Types Breakdown" in result[0].text
-        assert "A**: 65.5%" in result[0].text
-        assert "AAAA**: 25.3%" in result[0].text
-    
-    @pytest.mark.asyncio
-    async def test_handle_query_types_no_data(self, mock_mcp_server):
-        """Test handling query types request with no data."""
-        server = PiHoleMCPServer()
-        mock_client = Mock()
-        mock_client._make_request.return_value = {}
-        server.client = mock_client
-        
-        result = await server._handle_query_types()
-        
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], types.TextContent)
-        assert "No query types data available" in result[0].text
-    
-    @pytest.mark.asyncio
     async def test_handle_version_success(self, mock_mcp_server):
         """Test handling version request successfully."""
         server = PiHoleMCPServer()
@@ -526,17 +368,13 @@ class TestPiHoleMCPServer:
         tools = await handler()
         
         assert isinstance(tools, list)
-        assert len(tools) == 9  # All the tools we defined
+        assert len(tools) == 5  # All the tools we defined
         
         tool_names = [tool.name for tool in tools]
         expected_tools = [
             "pihole_status",
             "pihole_enable",
             "pihole_disable",
-            "pihole_query_stats",
-            "pihole_top_domains",
-            "pihole_top_blocked",
-            "pihole_query_types",
             "pihole_version",
             "pihole_test_connection"
         ]
