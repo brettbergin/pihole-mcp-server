@@ -1,17 +1,16 @@
 """Shared fixtures and utilities for pihole-mcp-server tests."""
 
-import json
 import tempfile
 from pathlib import Path
-from typing import Dict, Any, Optional
-from unittest.mock import Mock, AsyncMock, MagicMock
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 import responses
 from cryptography.fernet import Fernet
 
+from pihole_mcp_server.credential_manager import CredentialManager, StoredCredentials
 from pihole_mcp_server.pihole_client import PiHoleConfig, PiHoleStatus
-from pihole_mcp_server.credential_manager import StoredCredentials, CredentialManager
 
 
 @pytest.fixture
@@ -25,7 +24,7 @@ def sample_pihole_config() -> PiHoleConfig:
         use_https=False,
         verify_ssl=True,
         timeout=30,
-        api_version="legacy"
+        api_version="legacy",
     )
 
 
@@ -39,7 +38,7 @@ def sample_pihole_config_modern() -> PiHoleConfig:
         use_https=True,
         verify_ssl=False,
         timeout=15,
-        api_version="modern"
+        api_version="modern",
     )
 
 
@@ -62,7 +61,7 @@ def sample_pihole_status() -> PiHoleStatus:
         reply_nxdomain=67,
         reply_cname=89,
         reply_ip=1033,
-        privacy_level=0
+        privacy_level=0,
     )
 
 
@@ -77,7 +76,7 @@ def sample_stored_credentials() -> StoredCredentials:
         use_https=False,
         verify_ssl=True,
         timeout=30,
-        api_version="legacy"
+        api_version="legacy",
     )
 
 
@@ -110,7 +109,7 @@ def mock_requests_session(mocker):
     mock_session = mocker.patch("requests.Session")
     mock_instance = Mock()
     mock_session.return_value = mock_instance
-    
+
     # Configure default mock responses
     mock_response = Mock()
     mock_response.status_code = 200
@@ -121,12 +120,12 @@ def mock_requests_session(mocker):
     mock_instance.request.return_value = mock_response
     mock_instance.cookies = Mock()
     mock_instance.verify = True
-    
+
     return mock_instance
 
 
 @pytest.fixture
-def legacy_api_response() -> Dict[str, Any]:
+def legacy_api_response() -> dict[str, Any]:
     """Sample legacy API response."""
     return {
         "status": "enabled",
@@ -144,12 +143,12 @@ def legacy_api_response() -> Dict[str, Any]:
         "reply_NXDOMAIN": 67,
         "reply_CNAME": 89,
         "reply_IP": 1033,
-        "privacy_level": 0
+        "privacy_level": 0,
     }
 
 
 @pytest.fixture
-def modern_api_response() -> Dict[str, Any]:
+def modern_api_response() -> dict[str, Any]:
     """Sample modern API response."""
     return {
         "data": {
@@ -157,21 +156,16 @@ def modern_api_response() -> Dict[str, Any]:
                 "total": 1234,
                 "blocked": 567,
                 "percent_blocked": 45.8,
-                "unique_domains": 890
+                "unique_domains": 890,
             }
         }
     }
 
 
 @pytest.fixture
-def modern_auth_response() -> Dict[str, Any]:
+def modern_auth_response() -> dict[str, Any]:
     """Sample modern API authentication response."""
-    return {
-        "session": {
-            "valid": True,
-            "csrf": "test_csrf_token_123"
-        }
-    }
+    return {"session": {"valid": True, "csrf": "test_csrf_token_123"}}
 
 
 @pytest.fixture
@@ -180,23 +174,25 @@ def mock_mcp_server(mocker):
     mock_server = mocker.patch("mcp.server.Server")
     mock_instance = Mock()
     mock_server.return_value = mock_instance
-    
+
     # Mock the decorators to act like they register handlers
     def list_tools_decorator():
         def decorator(func):
             mock_instance._list_tools_handler = func
             return func
+
         return decorator
-    
+
     def call_tool_decorator():
         def decorator(func):
             mock_instance._call_tool_handler = func
             return func
+
         return decorator
-    
+
     mock_instance.list_tools = Mock(side_effect=list_tools_decorator)
     mock_instance.call_tool = Mock(side_effect=call_tool_decorator)
-    
+
     return mock_instance
 
 
@@ -220,7 +216,7 @@ def mock_file_operations(mocker):
     mock_open = mocker.patch("builtins.open", mocker.mock_open())
     mock_path = mocker.patch("pathlib.Path")
     mock_os = mocker.patch("os")
-    
+
     # Configure path operations
     mock_path_instance = Mock()
     mock_path.return_value = mock_path_instance
@@ -228,27 +224,20 @@ def mock_file_operations(mocker):
     mock_path_instance.mkdir.return_value = None
     mock_path_instance.chmod.return_value = None
     mock_path_instance.unlink.return_value = None
-    
-    return {
-        "open": mock_open,
-        "path": mock_path,
-        "os": mock_os
-    }
+
+    return {"open": mock_open, "path": mock_path, "os": mock_os}
 
 
 @pytest.fixture
-def sample_encrypted_data() -> Dict[str, str]:
+def sample_encrypted_data() -> dict[str, str]:
     """Sample encrypted data for testing."""
     key = Fernet.generate_key()
     f = Fernet(key)
-    
+
     sample_data = '{"host": "192.168.1.100", "port": 80}'
     encrypted_data = f.encrypt(sample_data.encode())
-    
-    return {
-        "encrypted_data": encrypted_data.decode(),
-        "salt": "test_salt_123"
-    }
+
+    return {"encrypted_data": encrypted_data.decode(), "salt": "test_salt_123"}
 
 
 @pytest.fixture
@@ -260,13 +249,13 @@ def responses_mock():
 
 class MockAsyncIterator:
     """Mock async iterator for testing."""
-    
+
     def __init__(self, items):
         self.items = iter(items)
-    
+
     def __aiter__(self):
         return self
-    
+
     async def __anext__(self):
         try:
             return next(self.items)
@@ -287,7 +276,9 @@ pytest_plugins = []
 
 
 # Utility functions for tests
-def create_mock_response(status_code: int = 200, json_data: Optional[Dict[str, Any]] = None) -> Mock:
+def create_mock_response(
+    status_code: int = 200, json_data: dict[str, Any] | None = None
+) -> Mock:
     """Create a mock HTTP response."""
     mock_response = Mock()
     mock_response.status_code = status_code
@@ -308,7 +299,9 @@ def assert_pihole_config_equal(config1: PiHoleConfig, config2: PiHoleConfig) -> 
     assert config1.api_version == config2.api_version
 
 
-def assert_stored_credentials_equal(cred1: StoredCredentials, cred2: StoredCredentials) -> None:
+def assert_stored_credentials_equal(
+    cred1: StoredCredentials, cred2: StoredCredentials
+) -> None:
     """Assert that two StoredCredentials objects are equal."""
     assert cred1.host == cred2.host
     assert cred1.port == cred2.port
@@ -317,4 +310,4 @@ def assert_stored_credentials_equal(cred1: StoredCredentials, cred2: StoredCrede
     assert cred1.use_https == cred2.use_https
     assert cred1.verify_ssl == cred2.verify_ssl
     assert cred1.timeout == cred2.timeout
-    assert cred1.api_version == cred2.api_version 
+    assert cred1.api_version == cred2.api_version

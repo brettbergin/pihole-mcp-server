@@ -1,1 +1,1 @@
-"""Test package for pihole-mcp-server.""" 
+"""Test package for pihole-mcp-server."""

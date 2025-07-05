@@ -3,24 +3,17 @@
 import asyncio
 import logging
 import sys
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any
 
 from mcp import types
-from mcp.server import Server, NotificationOptions
+from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
-    CallToolRequestParams,
-    CallToolResult,
     Tool,
-    TextContent,
-    ImageContent,
-    EmbeddedResource,
 )
-from pydantic import BaseModel, Field
 
-from .pihole_client import PiHoleClient, PiHoleConfig, PiHoleError
 from .credential_manager import CredentialManager, CredentialNotFoundError
-
+from .pihole_client import PiHoleClient, PiHoleError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,26 +22,27 @@ logger = logging.getLogger(__name__)
 
 class PiHoleToolError(Exception):
     """Exception for Pi-hole tool errors."""
+
     pass
 
 
 class PiHoleMCPServer:
     """MCP server for Pi-hole interactions."""
-    
+
     def __init__(self) -> None:
         """Initialize the MCP server."""
         self.server: Server = Server("pihole-mcp-server")
         self.credential_manager = CredentialManager()
-        self.client: Optional[PiHoleClient] = None
-        
+        self.client: PiHoleClient | None = None
+
         # Set up server handlers
         self._setup_handlers()
-    
+
     def _setup_handlers(self) -> None:
         """Set up server request handlers."""
-        
+
         @self.server.list_tools()
-        async def list_tools() -> List[Tool]:
+        async def list_tools() -> list[Tool]:
             """List available Pi-hole tools."""
             return [
                 Tool(
@@ -108,14 +102,16 @@ class PiHoleMCPServer:
                     },
                 ),
             ]
-        
+
         @self.server.call_tool()
-        async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.TextContent]:
+        async def call_tool(
+            name: str, arguments: dict[str, Any]
+        ) -> list[types.TextContent]:
             """Handle tool calls."""
             try:
                 # Ensure we have a client
                 await self._ensure_client_initialized()
-                
+
                 if name == "pihole_status":
                     return await self._handle_status()
                 elif name == "pihole_enable":
@@ -128,11 +124,11 @@ class PiHoleMCPServer:
                     return await self._handle_test_connection()
                 else:
                     raise PiHoleToolError(f"Unknown tool: {name}")
-            
+
             except Exception as e:
                 logger.error(f"Tool call failed: {e}")
                 return [types.TextContent(type="text", text=f"Error: {str(e)}")]
-    
+
     async def _initialize_client(self) -> None:
         """Initialize Pi-hole client from stored credentials."""
         try:
@@ -141,72 +137,82 @@ class PiHoleMCPServer:
         except CredentialNotFoundError:
             # Don't raise an error immediately - let individual tools handle this
             self.client = None
-    
+
     async def _ensure_client_initialized(self) -> None:
         """Ensure client is initialized, raising error if credentials not found."""
         if self.client is None:
             await self._initialize_client()
-        
+
         if self.client is None:
             raise PiHoleToolError(
                 "No Pi-hole credentials found. Please run 'pihole-mcp-cli login' first."
             )
-    
-    async def _handle_status(self) -> List[types.TextContent]:
+
+    async def _handle_status(self) -> list[types.TextContent]:
         """Handle status request."""
         try:
             await self._ensure_client_initialized()
             assert self.client is not None
             status = self.client.get_status()
-            
+
             # Format status information
             status_text = f"**Pi-hole Status: {status.status.upper()}**\n\n"
-            
+
             if status.queries_today is not None:
                 status_text += f"📊 **Queries Today:** {status.queries_today:,}\n"
             if status.ads_blocked_today is not None:
-                status_text += f"🚫 **Ads Blocked Today:** {status.ads_blocked_today:,}\n"
+                status_text += (
+                    f"🚫 **Ads Blocked Today:** {status.ads_blocked_today:,}\n"
+                )
             if status.ads_percentage_today is not None:
-                status_text += f"📈 **Block Percentage:** {status.ads_percentage_today:.1f}%\n"
+                status_text += (
+                    f"📈 **Block Percentage:** {status.ads_percentage_today:.1f}%\n"
+                )
             if status.unique_domains is not None:
                 status_text += f"🌐 **Unique Domains:** {status.unique_domains:,}\n"
             if status.unique_clients is not None:
                 status_text += f"👥 **Unique Clients:** {status.unique_clients:,}\n"
             if status.queries_forwarded is not None:
-                status_text += f"↗️ **Queries Forwarded:** {status.queries_forwarded:,}\n"
+                status_text += (
+                    f"↗️ **Queries Forwarded:** {status.queries_forwarded:,}\n"
+                )
             if status.queries_cached is not None:
                 status_text += f"💾 **Queries Cached:** {status.queries_cached:,}\n"
-            
+
             return [types.TextContent(type="text", text=status_text)]
-        
+
         except PiHoleError as e:
             raise PiHoleToolError(f"Failed to get Pi-hole status: {e}")
-    
-    async def _handle_enable(self) -> List[types.TextContent]:
+
+    async def _handle_enable(self) -> list[types.TextContent]:
         """Handle enable request."""
         try:
             await self._ensure_client_initialized()
             assert self.client is not None
             success = self.client.enable()
             if success:
-                return [types.TextContent(
-                    type="text",
-                    text="✅ **Pi-hole enabled successfully!**\n\nDNS blocking is now active."
-                )]
+                return [
+                    types.TextContent(
+                        type="text",
+                        text="✅ **Pi-hole enabled successfully!**\n\nDNS blocking is now active.",
+                    )
+                ]
             else:
                 raise PiHoleToolError("Failed to enable Pi-hole")
-        
+
         except PiHoleError as e:
             raise PiHoleToolError(f"Failed to enable Pi-hole: {e}")
-    
-    async def _handle_disable(self, arguments: Dict[str, Any]) -> List[types.TextContent]:
+
+    async def _handle_disable(
+        self, arguments: dict[str, Any]
+    ) -> list[types.TextContent]:
         """Handle disable request."""
         try:
             await self._ensure_client_initialized()
             assert self.client is not None
             duration_minutes = arguments.get("duration_minutes")
             duration_seconds = arguments.get("duration_seconds")
-            
+
             if duration_seconds is not None:
                 success = self.client.disable(duration_seconds)
                 duration_text = f"for {duration_seconds} seconds"
@@ -216,72 +222,74 @@ class PiHoleMCPServer:
             else:
                 success = self.client.disable()
                 duration_text = "permanently"
-            
+
             if success:
-                return [types.TextContent(
-                    type="text",
-                    text=f"🔴 **Pi-hole disabled {duration_text}!**\n\nDNS blocking is now inactive."
-                )]
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=f"🔴 **Pi-hole disabled {duration_text}!**\n\nDNS blocking is now inactive.",
+                    )
+                ]
             else:
                 raise PiHoleToolError("Failed to disable Pi-hole")
-        
+
         except PiHoleError as e:
             raise PiHoleToolError(f"Failed to disable Pi-hole: {e}")
-    
-    async def _handle_version(self) -> List[types.TextContent]:
+
+    async def _handle_version(self) -> list[types.TextContent]:
         """Handle version request."""
         try:
             await self._ensure_client_initialized()
             assert self.client is not None
             version_info = self.client.get_version()
-            
+
             result_text = "ℹ️ **Pi-hole Version Information**\n\n"
-            
+
             for key, value in version_info.items():
                 result_text += f"• **{key}**: {value}\n"
-            
+
             return [types.TextContent(type="text", text=result_text)]
-        
+
         except PiHoleError as e:
             raise PiHoleToolError(f"Failed to get version information: {e}")
-    
-    async def _handle_test_connection(self) -> List[types.TextContent]:
+
+    async def _handle_test_connection(self) -> list[types.TextContent]:
         """Handle test connection request."""
         try:
             await self._ensure_client_initialized()
             assert self.client is not None
             connection_ok = self.client.test_connection()
             auth_ok = self.client.test_authentication()
-            
+
             result_text = "🔧 **Pi-hole Connection Test**\n\n"
-            
+
             if connection_ok:
                 result_text += "✅ **Connection**: OK\n"
             else:
                 result_text += "❌ **Connection**: FAILED\n"
-            
+
             if auth_ok:
                 result_text += "✅ **Authentication**: OK\n"
             else:
                 result_text += "❌ **Authentication**: FAILED\n"
-            
+
             if connection_ok and auth_ok:
                 result_text += "\n🎉 **All tests passed!** Pi-hole is ready for use."
             else:
-                result_text += "\n⚠️ **Some tests failed.** Please check your configuration."
-            
+                result_text += (
+                    "\n⚠️ **Some tests failed.** Please check your configuration."
+                )
+
             return [types.TextContent(type="text", text=result_text)]
-        
+
         except PiHoleError as e:
             raise PiHoleToolError(f"Failed to test connection: {e}")
-    
+
     async def run(self) -> None:
         """Run the MCP server."""
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
-                read_stream,
-                write_stream,
-                self.server.create_initialization_options()
+                read_stream, write_stream, self.server.create_initialization_options()
             )
 
 
@@ -297,6 +305,7 @@ async def async_main() -> None:
     except Exception as e:
         logger.error(f"Server error: {e}")
         import traceback
+
         logger.error(f"Traceback: {traceback.format_exc()}")
         sys.exit(1)
 
@@ -307,4 +316,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()
