@@ -1,7 +1,6 @@
 """Tests for package initialization and imports."""
 
 
-
 class TestPackageImports:
     """Test cases for package imports and initialization."""
 

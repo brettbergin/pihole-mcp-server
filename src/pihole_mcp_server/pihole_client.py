@@ -25,9 +25,7 @@ class PiHoleConfig(BaseModel):
     use_https: bool = Field(default=False, description="Use HTTPS for connection")
     verify_ssl: bool = Field(default=True, description="Verify SSL certificates")
     timeout: int = Field(default=30, description="Request timeout in seconds")
-    api_version: str | None = Field(
-        None, description="API version (legacy or modern)"
-    )
+    api_version: str | None = Field(None, description="API version (legacy or modern)")
 
     @validator("host")
     def validate_host(cls, v: str) -> str:
@@ -75,9 +73,7 @@ class PiHoleStatus(BaseModel):
     queries_cached: int | None = Field(None, description="Queries cached")
     clients_ever_seen: int | None = Field(None, description="Clients ever seen")
     unique_clients: int | None = Field(None, description="Unique clients")
-    dns_queries_all_types: int | None = Field(
-        None, description="DNS queries all types"
-    )
+    dns_queries_all_types: int | None = Field(None, description="DNS queries all types")
     reply_nodata: int | None = Field(None, description="Reply NODATA")
     reply_nxdomain: int | None = Field(None, description="Reply NXDOMAIN")
     reply_cname: int | None = Field(None, description="Reply CNAME")
